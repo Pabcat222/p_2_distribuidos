@@ -22,4 +22,7 @@ return 0;
 ->Hay que hacer claves.c, servidor-mq.c y proxy-mq.case
 ->Hay que general una biblioteca dinámica con proxy y libclaves: Opciones del gcc
 ->Hacer plan de pruebas
+->El servidor tienen que ser las operaciones atómicas: Un servidor tiene dos clientes y los dos insertan la misma clave, 
+el servidor va a tener dos hilos con la misma entrada, hay que hacerlo atómico sobre la misma dirección de memoria.
+
 */

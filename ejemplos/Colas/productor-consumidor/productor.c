@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MAX_BUFFER               10    /* tamaño del buffer */
+#define MAX_BUFFER               10   /* tamaño del buffer */
 #define DATOS_A_PRODUCIR         100000 /* datos a producir */
 
 void Productor(mqd_t cola){
@@ -17,6 +17,7 @@ void Productor(mqd_t cola){
                         mq_close(cola);
                         exit(1);
                 }
+                printf("El dato producido es: %d\n", dato);
         } /* end for */
         return;
 } /* end productor */
