@@ -1,34 +1,29 @@
-# Makefile for all C source files in the directory
-
 # Compiler
 CC = gcc
 
-# Compiler flags
-CFLAGS = -Wall -Wextra -std=c11 -lrt
+# Flags
+CFLAGS = -Wall -Wextra -std=c11
+LDFLAGS = -lrt -pthread -lsqlite3
 
-# Target executable
-TARGET = programa
+# Ejecutables
+TARGETS = cliente servidor
 
-# Source files
-SRCS = $(wildcard *.c)
+all: $(TARGETS)
 
-# Object files
-OBJS = $(SRCS:.c=.o)
+# Compilar el Cliente (app_cliente.c + proxy-mq.c)
+cliente: app_cliente.o proxy-mq.o
+	$(CC) $(CFLAGS) -o cliente app_cliente.o proxy-mq.o $(LDFLAGS)
 
-# Default target
-all: $(TARGET)
+# Compilar el Servidor (servidor-mq.c + claves.c)
+servidor: servidor-mq.o claves.o
+	$(CC) $(CFLAGS) -o servidor servidor-mq.o claves.o $(LDFLAGS)
 
-# Link the object files to create the executable
-$(TARGET): $(OBJS)
-	$(CC) $(CFLAGS) -o $(TARGET) $(OBJS)
-
-# Compile the source files into object files
+# Compilar archivos fuente en objetos
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
-# Clean up build files
+# Limpiar archivos generados
 clean:
-	rm -f $(TARGET) $(OBJS)
+	rm -f $(TARGETS) *.o
 
-# Phony targets
 .PHONY: all clean
