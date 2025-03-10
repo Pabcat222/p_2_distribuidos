@@ -1,28 +1,50 @@
-BIN_FILES  = cliente servidor
-
+# Compiler
 CC = gcc
 
-CPPFLAGS = -I$(INSTALL_PATH)/include -Wall
+# Compiler flags
+CFLAGS = -Wall -Wextra -std=c11 -fPIC
+LDFLAGS = -lrt -pthread
 
-LDFLAGS = -L$(INSTALL_PATH)/lib/
-LDLIBS = -lpthread -lrt
+# Target executables
+TARGETS = app_cliente servidor-mq database
 
+# Shared libraries
+SHARED_LIBS = libproxy.so libclaves.so
 
-all: $(BIN_FILES)
-.PHONY : all
+# Object files
+OBJS_CLIENTE = app_cliente.o libclaves.so
+OBJS_SERVIDOR = servidor-mq.o libproxy.so
+OBJS_DB = main.o claves.o
 
+# Default target
+all: $(TARGETS) $(SHARED_LIBS)
 
-cliente: cliente.o
-	$(CC) $(CFLAGS) $(LDFLAGS) $^ $(LDLIBS) -o $@
+# Compile app_cliente
+app_cliente: app_cliente.o libclaves.so
+	$(CC) $(CFLAGS) -o $@ app_cliente.o -L. -lclaves $(LDFLAGS)
 
-servidor: servidor.o
-	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
+# Compile servidor-mq
+servidor-mq: servidor-mq.o libproxy.so
+	$(CC) $(CFLAGS) -o $@ servidor-mq.o -L. -lproxy $(LDFLAGS)
 
+# Compile database
+database: $(OBJS_DB)
+	$(CC) $(CFLAGS) -o $@ $(OBJS_DB) -lsqlite3 $(LDFLAGS)
+
+# Create shared libraries
+libproxy.so: proxy-mq.o
+	$(CC) -shared -o $@ $^
+
+libclaves.so: claves.o
+	$(CC) -shared -o $@ $^
+
+# Compile source files into object files
 %.o: %.c
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $< -o $@
 
+# Clean up build files
 clean:
-	rm -f $(BIN_FILES) *.o
+	rm -f $(TARGETS) $(OBJS_CLIENTE) $(OBJS_SERVIDOR) $(OBJS_DB) $(SHARED_LIBS)
 
-.SUFFIXES:
-.PHONY : clean
+# Phony targets
+.PHONY: all clean

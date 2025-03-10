@@ -4,63 +4,48 @@
 #include <string.h>
 #include <sys/stat.h>
 
-
 #define MAX_BUFFER   10000
 
 mqd_t mqdes;
 
 typedef struct Obj {
     int key;
-    char *value1;
+    char value1[256];
     int N_value2;
-    double *V_value2;
+    double V_value2[10];
     struct Coord value3;
-}Obj;
+} Obj;
 
-int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3){
-    mqdes = mqopen ("/Cola1", O_WRONLY|O_CREAT, 0664, NULL);
+int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3) {
+    mqd_t mqdes = mq_open("/Cola2", O_WRONLY);
     if (mqdes == (mqd_t)-1) {
         perror("Error al abrir la cola de mensajes");
         return -1;
     }
-    
-    Obj mensaje;
-    mensaje.key = key;
 
-    mensaje.value1 = malloc(strlen(value1) + 1); //Reservas memoria con la misma longitud que la cadena de caracteres
-    if (mensaje.value1 == NULL) {
-        perror("No se pudo asignar memoria para la cadena de caracteres");
-        return -1;
-    }
-    strcpy(mensaje.value1, value1);
+    Obj obj;
+    obj.key = key;
+    strncpy(obj.value1, value1, sizeof(obj.value1) - 1);
+    obj.value1[sizeof(obj.value1) - 1] = '\0';
+    obj.N_value2 = (N_value2 > 10) ? 10 : N_value2;
+    memcpy(obj.V_value2, V_value2, obj.N_value2 * sizeof(double));
+    obj.value3 = value3;
 
-    mensaje.N_value2 = N_value2;
-    mensaje.V_value2 = malloc(N_value2 * sizeof(double));
-    if (mensaje.V_value2 == NULL) {
-        perror("Error al asignar memoria para V_value2");
-        free(obj.value1); // Liberamos memoria de value1 antes de salir
-        return -1;
-    }
-    memcpy(mensaje.V_value2, V_value2, N_value2 * sizeof(double));
-
-    // Asignar value3
-    mensaje.value3 = value3;
-
-    // Enviar la estructura a la cola de mensajes
-    if (mq_send(mqdes, (char *)&mensaje, sizeof(mensaje), 0) == -1) {
+    if (mq_send(mqdes, (char *)&obj, sizeof(obj), 0) == -1) {
         perror("Error al enviar el mensaje");
-        free(mensaje.value1);
-        free(mensaje.V_value2);
         return -1;
     }
 
-    printf("Objeto enviado correctamente a la cola de mensajes.\n");
-
-    // Liberar memoria y cerrar la cola
-    free(mensaje.value1);
-    free(mensaje.V_value2);
+    printf("Objeto enviado correctamente.\n");
     mq_close(mqdes);
-
     return 0;
 }
 
+int main() {
+    struct Coord coord = {5, 10};
+    double valores[] = {10.5, 20.3, 30.7};
+
+    set_value(42, "Ejemplo", 3, valores, coord);
+
+    return 0;
+}
