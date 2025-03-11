@@ -3,9 +3,16 @@
 #include <string.h>
 #include <mqueue.h>
 #include <pthread.h>
+#include <stdbool.h>
 #include "claves.h"
+#include <signal.h>
 
+mqd_t q_servidor;
 pthread_mutex_t db_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t mutex_mensaje;
+pthread_cond_t cond_mensaje;
+int mensaje_no_copiado = true;
+
 
 typedef struct {
     int key;
@@ -16,29 +23,27 @@ typedef struct {
     int operation;
 } Obj;   
 
-int main() {
-    struct mq_attr attr;
-    attr.mq_flags = 0;
-    attr.mq_maxmsg = 10;
-    attr.mq_msgsize = sizeof(Obj);
-    attr.mq_curmsgs = 0;
-    
-    mqd_t mqdes = mq_open("/Cola4", O_RDONLY | O_CREAT, 0664, &attr);
-    if (mqdes == (mqd_t)-1) {
-        perror("Error al abrir la cola de mensajes");
-        return -2;
-    }
+int tratarMensaje(void *mess){
+    Obj obj;
+    int res; //respuesta
+    mqd_t q_cliente;
 
-    printf("Servidor en espera de mensajes...\n");
+    char queuename[256];
 
-    while (1) {
-        Obj obj;  
-        ssize_t bytes_read = mq_receive(mqdes, (char *)&obj, sizeof(obj), NULL);
-        if (bytes_read == -1) {
-            perror("Error al recibir mensaje");
-            continue;
-        }
+    //Thread copia mensaje a mensaje local
+    pthread_mutex_lock(&mutex_mensaje);
+    obj = (*(Obj *) mess);
 
+    //Ya se puede despertar al servidor
+    mensaje_no_copiado = false;
+    pthread_cond_signal(&cond_mensaje);
+    pthread_mutex_unlock(&mutex_mensaje);
+
+    //EJECUCIÓN DE FUNCIONES
+    pthread_mutex_lock(&db_mutex);
+    switch (obj.operation)
+    {
+    case 1:
         // Imprimir los valores recibidos
         printf("Mensaje recibido:\n");
         printf("  key: %d\n", obj.key);
@@ -51,20 +56,100 @@ int main() {
         printf("\n  value3: (%d, %d)\n", obj.value3.x, obj.value3.y);
         printf("  operacion: %d\n", obj.operation);
 
-        pthread_mutex_lock(&db_mutex);
-
-        // Insertar en la base de datos
+        //Insertar en la base de datos y prepara respuesta para cliente
         
         if (set_value(obj.key, obj.value1, obj.N_value2, obj.V_value2, obj.value3) == -1) {
             printf("Error: No se pudo guardar el mensaje en la base de datos.\n");
+            res = -1;
         } else {
             printf("Mensaje guardado correctamente en la base de datos.\n");
+            res = 1;
+            
+        }
+        break;
+
+
+    case 2:
+        if (destroy()==-1){
+            printf("Fallos al eliminar la base de datos\n");
+            res = -1;
+        }
+        else{
+            res = 0;
+        }
+        break;
+    }
+
+    //Se devuelve el resultado al cliente
+    sprintf(queuename, "/Cola-%d", obj.key);
+    q_cliente = mq_open(queuename, O_WRONLY);
+    if (q_cliente == (mqd_t)-1) {
+        perror("Error al abrir la cola de mensajes del cliente\n");
+        return -2;
+    }
+    else{
+        if(mq_send(q_cliente, (const char *) &res, sizeof(int), 0) < 0){
+            perror("Error al enviar mensaje al cliente\n");
+            mq_close(q_servidor);
+            mq_unlink("/SERVIDOR");
+            mq_close(q_cliente);
+
+        }
+    }
+    mq_close(q_servidor);
+    mq_unlink("/SERVIDOR");
+    mq_close(q_cliente);
+    pthread_exit(0);
+}
+void handle_sigint() {
+    printf("\nSaliendo del servidor...\nHasta la próxima\n");
+    exit(0);}
+
+int main() {
+    struct mq_attr attr;
+    attr.mq_flags = 0;
+    attr.mq_maxmsg = 10;
+    attr.mq_msgsize = sizeof(Obj);
+    attr.mq_curmsgs = 0;
+    Obj mess;
+    pthread_attr_t t_attr;
+    pthread_t thid;
+    signal(SIGINT, handle_sigint);
+    
+    q_servidor = mq_open("/SERVIDOR", O_RDONLY | O_CREAT, 0700, &attr);
+    if (q_servidor == -1) {
+        perror("Error al abrir la cola de mensajes");
+        return -2;
+    }
+
+    printf("Servidor en espera de mensajes...\n");
+    //Inician los hilos
+    pthread_mutex_init(&mutex_mensaje, NULL);
+    pthread_mutex_init(&db_mutex, NULL);
+    pthread_cond_init(&cond_mensaje, NULL);
+    pthread_attr_init(&t_attr);
+
+    //Atributos de los threads independientes
+    pthread_attr_setdetachstate(&t_attr, PTHREAD_CREATE_DETACHED);
+
+    while (1) { 
+        ssize_t bytes_read = mq_receive(q_servidor, (char *)&mess, sizeof(mess), NULL);
+        if (bytes_read == -1) {
+            perror("Error al recibir mensaje");
+            continue;
+        }
+
+        if(pthread_create(&thid,&t_attr, (void *)tratarMensaje, (void *)&mess)== 0){
+            //se espera a que el thread se copie el mensaje
+            pthread_mutex_lock(&mutex_mensaje);
+            while(mensaje_no_copiado){
+                pthread_cond_wait(&cond_mensaje, &mutex_mensaje);
+            }
+            mensaje_no_copiado = true;
+            pthread_mutex_unlock(&mutex_mensaje);
         }
 
         pthread_mutex_unlock(&db_mutex);
     }
-    mq_close(mqdes);
-    mq_unlink("/Cola4");
-
     return 0;
 }

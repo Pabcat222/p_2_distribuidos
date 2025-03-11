@@ -59,11 +59,37 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         printf("Error al insertar en la base de datos: %s\n", sqlite3_errmsg(db));
+        return -1;
     } else {
         printf("Inserción realizada con éxito.\n");
     }
 
     sqlite3_finalize(stmt);
+    sqlite3_close(db);
+    return 0;
+}
+
+int destroy(void){
+    sqlite3 *db;
+    char *err_msg = NULL;
+
+    if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {
+        printf("Error al abrir la base de datos: %s\n", sqlite3_errmsg(db));
+        return -1;
+    }
+
+    // Eliminar todas las filas
+    const char *sql = "DELETE FROM datos;";
+
+    if (sqlite3_exec(db, sql, NULL, NULL, &err_msg) != SQLITE_OK) {
+        printf("Error al eliminar datos: %s\n", err_msg);
+        sqlite3_free(err_msg);
+        sqlite3_close(db);
+        return -1;
+    }
+
+    printf("Eliminando la base de datos...\nTodas las filas de la base de datos han sido eliminadas correctamente.\n");
+
     sqlite3_close(db);
     return 0;
 }

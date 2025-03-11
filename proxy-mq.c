@@ -6,7 +6,9 @@
 
 #define MAX_BUFFER   10000
 
-mqd_t mqdes;
+mqd_t q_servidor;
+mqd_t q_cliente;
+int res;
 
 typedef struct Obj { // Definir la estructura del objeto que se envía por la cola
     int key;
@@ -19,30 +21,46 @@ typedef struct Obj { // Definir la estructura del objeto que se envía por la co
 
 int send_message(Obj msg) {
     struct mq_attr attr;
-    attr.mq_flags = 0;
-    attr.mq_maxmsg = 10;
-    attr.mq_msgsize = sizeof(Obj);
-    attr.mq_curmsgs = 0;
+    char queuename[256];
+    attr.mq_maxmsg = 1;     
+	attr.mq_msgsize = sizeof(int);
     
-    mqd_t mqdes = mq_open("/Cola4", O_WRONLY | O_CREAT, 0664, &attr);
-    if (mqdes == (mqd_t)-1) {
-        perror("Error al abrir la cola de mensajes");
+    sprintf(queuename, "/Cola-%d", msg.key);
+    //CREAR COLAS
+    q_cliente = mq_open(queuename, O_CREAT|O_RDONLY, 0700, &attr);
+    q_servidor = mq_open("/SERVIDOR", O_WRONLY);
+    //ERROR AL CREAR COLAS
+    if (q_servidor == (mqd_t)-1) {
+        perror("Error al abrir la cola de mensajes del servidor\n");
+        return -2;
+    }
+    if (q_cliente == (mqd_t)-1) {
+        perror("Error al abrir la cola de mensajes del cliente\n");
         return -2;
     }
 
-    if (mq_send(mqdes, (char *)&msg, sizeof(msg), 0) == -1) {
-        perror("Error al enviar mensaje");
-        mq_close(mqdes);
+    if (mq_send(q_servidor, (char *)&msg, sizeof(msg), 0) == -1) {
+        perror("Error al enviar mensaje\n");
         return -2;
     }
+    printf("Objeto enviado correctamente.\n");
 
-    mq_close(mqdes);
+    if (mq_receive(q_cliente, (char *) &res, sizeof(int), 0) < 0){
+		perror("Error al recibir desde el servidor");
+		return -2;
+    }
+    printf("Servidor dice: %d\n", res);
+    
+
+    mq_close(q_servidor);
+    mq_close(q_cliente);
+    mq_unlink(queuename);
     return 0;
 }
 
 int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3) {
     if (1 > N_value2 || N_value2 > 32){
-        printf("El vector de elementos debe tener entre 1 y 32 elementos");
+        printf("El vector de elementos debe tener entre 1 y 32 elementos\n");
         return -1;
     }
 
@@ -57,6 +75,13 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
 
     send_message(obj);
 
-    printf("Objeto enviado correctamente.\n");
+    
+    return 0;
+}
+
+int destroy(void){
+    Obj obj;
+    obj.operation = 2;
+    send_message(obj);
     return 0;
 }
