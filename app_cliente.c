@@ -3,13 +3,14 @@
 
 int main (int argc, char **argv)
 {
-int key = 45;
+int key = 234;
 char *v1 = "holiwi";
 double v2[] = {2.3, 0.5, 23.45};
 struct Coord v3;
 v3.x = 10;
 v3.y = 5;
 int err = set_value(key, v1, 3, v2, v3);
+printf("termina ya \n");
 //int err = destroy();
 if (err == -1) {
 printf("Error al insertar la tupla\n");

@@ -4,6 +4,7 @@
 
 #define DB_NAME "database.db"
 
+
 void crearBaseDatos() {
     sqlite3 *db;
     if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {

@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include "claves.h"
 #include <signal.h>
+#include <unistd.h>
 
 mqd_t q_servidor;
 pthread_mutex_t db_mutex = PTHREAD_MUTEX_INITIALIZER;
@@ -21,14 +22,13 @@ typedef struct {
     double V_value2[32];
     struct Coord value3;
     int operation;
+    char q_name[256];
 } Obj;   
 
 int tratarMensaje(void *mess){
     Obj obj;
     int res; //respuesta
     mqd_t q_cliente;
-
-    char queuename[256];
 
     //Thread copia mensaje a mensaje local
     pthread_mutex_lock(&mutex_mensaje);
@@ -63,10 +63,12 @@ int tratarMensaje(void *mess){
             res = -1;
         } else {
             printf("Mensaje guardado correctamente en la base de datos.\n");
-            res = 1;
+            res = 0;
             
         }
+        
         break;
+        
 
 
     case 2:
@@ -79,10 +81,11 @@ int tratarMensaje(void *mess){
         }
         break;
     }
+    pthread_mutex_unlock(&db_mutex);
 
     //Se devuelve el resultado al cliente
-    sprintf(queuename, "/Cola-%d", obj.key);
-    q_cliente = mq_open(queuename, O_WRONLY);
+    q_cliente = mq_open(obj.q_name, O_WRONLY);
+    printf("cola cliente: %s \n", obj.q_name);
     if (q_cliente == (mqd_t)-1) {
         perror("Error al abrir la cola de mensajes del cliente\n");
         return -2;
@@ -133,7 +136,7 @@ int main() {
     pthread_attr_setdetachstate(&t_attr, PTHREAD_CREATE_DETACHED);
 
     while (1) { 
-        ssize_t bytes_read = mq_receive(q_servidor, (char *)&mess, sizeof(mess), NULL);
+        ssize_t bytes_read = mq_receive(q_servidor, (char *)&mess, sizeof(Obj), NULL);
         if (bytes_read == -1) {
             perror("Error al recibir mensaje");
             continue;
@@ -147,9 +150,9 @@ int main() {
             }
             mensaje_no_copiado = true;
             pthread_mutex_unlock(&mutex_mensaje);
+            
         }
 
-        pthread_mutex_unlock(&db_mutex);
     }
     return 0;
 }

@@ -3,6 +3,7 @@
 #include <mqueue.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #define MAX_BUFFER   10000
 
@@ -17,17 +18,16 @@ typedef struct Obj { // Definir la estructura del objeto que se envía por la co
     double V_value2[32];
     struct Coord value3;
     int operation;
+    char q_name[256];
 } Obj;
 
 int send_message(Obj msg) {
     struct mq_attr attr;
-    char queuename[256];
     attr.mq_maxmsg = 1;     
 	attr.mq_msgsize = sizeof(int);
     
-    sprintf(queuename, "/Cola-%d", msg.key);
     //CREAR COLAS
-    q_cliente = mq_open(queuename, O_CREAT|O_RDONLY, 0700, &attr);
+    q_cliente = mq_open(msg.q_name, O_CREAT|O_RDONLY, 0700, &attr);
     q_servidor = mq_open("/SERVIDOR", O_WRONLY);
     //ERROR AL CREAR COLAS
     if (q_servidor == (mqd_t)-1) {
@@ -39,7 +39,7 @@ int send_message(Obj msg) {
         return -2;
     }
 
-    if (mq_send(q_servidor, (char *)&msg, sizeof(msg), 0) == -1) {
+    if (mq_send(q_servidor, (char *)&msg, sizeof(Obj), 0) == -1) {
         perror("Error al enviar mensaje\n");
         return -2;
     }
@@ -54,7 +54,7 @@ int send_message(Obj msg) {
 
     mq_close(q_servidor);
     mq_close(q_cliente);
-    mq_unlink(queuename);
+    mq_unlink(msg.q_name);
     return 0;
 }
 
@@ -63,8 +63,11 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
         printf("El vector de elementos debe tener entre 1 y 32 elementos\n");
         return -1;
     }
-
     Obj obj;
+    char queuename[256];
+    sprintf(queuename, "/Cola-%d", getpid());
+    printf("Queuename con sprintf: %s\nobj.q_name con sprintf: %s\n", queuename, obj.q_name);
+    
     obj.key = key;
     strncpy(obj.value1, value1, sizeof(obj.value1) - 1);
     obj.value1[sizeof(obj.value1) - 1] = '\0';
@@ -72,9 +75,11 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     memcpy(obj.V_value2, V_value2, obj.N_value2 * sizeof(double));
     obj.value3 = value3;
     obj.operation = 1;
+    strcpy(obj.q_name, queuename);
+    printf("Nombre queuename con strcpy: %s\nNombre obj.q_name con strcpy %s\n", queuename, obj.q_name);
 
     send_message(obj);
-
+    printf("Termina el send message\n");
     
     return 0;
 }

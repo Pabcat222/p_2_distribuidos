@@ -3,7 +3,7 @@
 
 int main (int argc, char **argv)
 {
-int key = 67;
+int key = 44;
 char *v1 = "holiwi";
 double v2[] = {2.3, 0.5, 23.45};
 struct Coord v3;
