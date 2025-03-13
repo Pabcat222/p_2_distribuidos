@@ -1,9 +1,15 @@
+#define _POSIX_C_SOURCE 200809L
+
 #include <stdio.h>
 #include "claves.h"
 #include <mqueue.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <time.h>
+
+
+
 
 #define MAX_BUFFER   10000
 
@@ -28,7 +34,7 @@ int send_message(Obj msg) {
     
     //CREAR COLAS
     q_cliente = mq_open(msg.q_name, O_CREAT|O_RDONLY, 0700, &attr);
-    q_servidor = mq_open("/SERVIDOR", O_WRONLY);
+    q_servidor = mq_open("/SERVIDOR-5764-5879", O_WRONLY);
     //ERROR AL CREAR COLAS
     if (q_servidor == (mqd_t)-1) {
         perror("Error al abrir la cola de mensajes del servidor\n");
@@ -41,12 +47,19 @@ int send_message(Obj msg) {
 
     if (mq_send(q_servidor, (char *)&msg, sizeof(Obj), 0) == -1) {
         perror("Error al enviar mensaje\n");
+        mq_close(q_servidor);
+        mq_close(q_cliente);
+        mq_unlink(msg.q_name);
         return -2;
     }
     printf("Objeto enviado correctamente.\n");
 
     if (mq_receive(q_cliente, (char *) &res, sizeof(int), 0) < 0){
 		perror("Error al recibir desde el servidor");
+
+        mq_close(q_servidor);
+        mq_close(q_cliente);
+        mq_unlink(msg.q_name);
 		return -2;
     }
     printf("Servidor dice: %d\n", res);
@@ -55,6 +68,8 @@ int send_message(Obj msg) {
     mq_close(q_servidor);
     mq_close(q_cliente);
     mq_unlink(msg.q_name);
+
+
     return 0;
 }
 
@@ -65,8 +80,8 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     }
     Obj obj;
     char queuename[256];
-    sprintf(queuename, "/Cola-%d", getpid());
-    printf("Queuename con sprintf: %s\nobj.q_name con sprintf: %s\n", queuename, obj.q_name);
+    sprintf(queuename, "/Cola-%d-5764-5879", getpid());
+    
     
     obj.key = key;
     strncpy(obj.value1, value1, sizeof(obj.value1) - 1);
@@ -76,7 +91,7 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     obj.value3 = value3;
     obj.operation = 1;
     strcpy(obj.q_name, queuename);
-    printf("Nombre queuename con strcpy: %s\nNombre obj.q_name con strcpy %s\n", queuename, obj.q_name);
+
 
     send_message(obj);
     printf("Termina el send message\n");

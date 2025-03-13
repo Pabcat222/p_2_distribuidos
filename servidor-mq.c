@@ -85,7 +85,7 @@ int tratarMensaje(void *mess){
 
     //Se devuelve el resultado al cliente
     q_cliente = mq_open(obj.q_name, O_WRONLY);
-    printf("cola cliente: %s \n", obj.q_name);
+    
     if (q_cliente == (mqd_t)-1) {
         perror("Error al abrir la cola de mensajes del cliente\n");
         return -2;
@@ -93,18 +93,18 @@ int tratarMensaje(void *mess){
     else{
         if(mq_send(q_cliente, (const char *) &res, sizeof(int), 0) < 0){
             perror("Error al enviar mensaje al cliente\n");
-            mq_close(q_servidor);
-            mq_unlink("/SERVIDOR");
-            mq_close(q_cliente);
+            /*mq_close(q_servidor);
+            mq_unlink("/SERVIDOR-5764-5879");
+            mq_close(q_cliente);*/
 
         }
     }
-    mq_close(q_servidor);
-    mq_unlink("/SERVIDOR");
+    /*mq_close(q_servidor);
+    mq_unlink("/SERVIDOR-5764-5879");
     mq_close(q_cliente);
-    pthread_exit(0);
+    pthread_exit(0);*/
 }
-void handle_sigint() {
+void cerrar_servidor() {
     printf("\nSaliendo del servidor...\nHasta la próxima\n");
     exit(0);}
 
@@ -117,9 +117,9 @@ int main() {
     Obj mess;
     pthread_attr_t t_attr;
     pthread_t thid;
-    signal(SIGINT, handle_sigint);
+    signal(SIGINT, cerrar_servidor);
     
-    q_servidor = mq_open("/SERVIDOR", O_RDONLY | O_CREAT, 0700, &attr);
+    q_servidor = mq_open("/SERVIDOR-5764-5879", O_RDONLY | O_CREAT, 0700, &attr);
     if (q_servidor == -1) {
         perror("Error al abrir la cola de mensajes");
         return -2;
