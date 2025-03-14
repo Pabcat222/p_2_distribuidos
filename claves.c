@@ -94,3 +94,80 @@ int destroy(void){
     sqlite3_close(db);
     return 0;
 }
+
+int delete_key(int key) {
+    sqlite3 *db;
+    sqlite3_stmt *stmt;
+
+    if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {
+        printf("Error al abrir la base de datos: %s\n", sqlite3_errmsg(db));
+        return -1;
+    }
+
+    const char *sql = "DELETE FROM datos WHERE key = ?;";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        printf("Error al preparar la consulta: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return -1;
+    }
+
+    sqlite3_bind_int(stmt, 1, key);
+
+    if (sqlite3_step(stmt) == SQLITE_DONE) {
+        if (sqlite3_changes(db) == 0) {
+            printf("La clave %d no existe en la base de datos.\n", key);
+            sqlite3_finalize(stmt);
+            sqlite3_close(db);
+            return -1;
+        }
+        printf("La clave %d ha sido eliminada correctamente.\n", key);
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return 0;
+    } else {
+        printf("Error al eliminar la clave %d: %s\n", key, sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return -1;
+    }
+}
+
+
+int exist(int key) {
+    sqlite3 *db;
+    sqlite3_stmt *stmt;
+
+    if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {
+        printf("Error al abrir la base de datos: %s\n", sqlite3_errmsg(db));
+        return -1;
+    }
+
+    const char *sql = "SELECT 1 FROM datos WHERE key = ? LIMIT 1;";
+
+    if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
+        printf("Error al preparar la consulta: %s\n", sqlite3_errmsg(db));
+        sqlite3_close(db);
+        return -1;
+    }
+
+    sqlite3_bind_int(stmt, 1, key);
+
+    int result = sqlite3_step(stmt);
+    if (result == SQLITE_ROW) {
+        printf("La clave %d existe en la base de datos.\n", key);
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return 1; // La clave existe
+    } else if (result == SQLITE_DONE) {
+        printf("La clave %d no existe en la base de datos.\n", key);
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return 0; // La clave no existe
+    } else {
+        printf("Error al comprobar la clave %d: %s\n", key, sqlite3_errmsg(db));
+        sqlite3_finalize(stmt);
+        sqlite3_close(db);
+        return -1; // Error al ejecutar la consulta
+    }
+}

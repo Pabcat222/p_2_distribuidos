@@ -80,6 +80,26 @@ int tratarMensaje(void *mess){
             res = 0;
         }
         break;
+
+    case 3:
+        if (delete_key(obj.key) == -1){
+            printf("Fallo al eliminar los elementos de la key\n");
+            res = -1;
+        }
+        else{
+            res = 0;
+        }
+        break;
+
+    case 4:
+     if (exist(obj.key) == -1){
+        printf("Fallo al comprobar la base de datos\n");
+        res = -1;
+        }
+        else{
+            res = 0;
+        }
+        break;
     }
     pthread_mutex_unlock(&db_mutex);
 
@@ -93,19 +113,20 @@ int tratarMensaje(void *mess){
     else{
         if(mq_send(q_cliente, (const char *) &res, sizeof(int), 0) < 0){
             perror("Error al enviar mensaje al cliente\n");
-            /*mq_close(q_servidor);
+            mq_close(q_servidor);
             mq_unlink("/SERVIDOR-5764-5879");
-            mq_close(q_cliente);*/
+            mq_close(q_cliente);
 
         }
     }
-    /*mq_close(q_servidor);
-    mq_unlink("/SERVIDOR-5764-5879");
+
     mq_close(q_cliente);
-    pthread_exit(0);*/
+    pthread_exit(0);
 }
 void cerrar_servidor() {
     printf("\nSaliendo del servidor...\nHasta la próxima\n");
+    mq_close(q_servidor);
+    mq_unlink("/SERVIDOR-5764-5879");
     exit(0);}
 
 int main() {

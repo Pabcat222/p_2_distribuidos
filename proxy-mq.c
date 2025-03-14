@@ -31,6 +31,10 @@ int send_message(Obj msg) {
     struct mq_attr attr;
     attr.mq_maxmsg = 1;     
 	attr.mq_msgsize = sizeof(int);
+
+    char queuename[256];
+    sprintf(queuename, "/Cola-%d-5764-5879", getpid());
+    strcpy(msg.q_name, queuename);
     
     //CREAR COLAS
     q_cliente = mq_open(msg.q_name, O_CREAT|O_RDONLY, 0700, &attr);
@@ -68,8 +72,6 @@ int send_message(Obj msg) {
     mq_close(q_servidor);
     mq_close(q_cliente);
     mq_unlink(msg.q_name);
-
-
     return 0;
 }
 
@@ -79,9 +81,6 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
         return -1;
     }
     Obj obj;
-    char queuename[256];
-    sprintf(queuename, "/Cola-%d-5764-5879", getpid());
-    
     
     obj.key = key;
     strncpy(obj.value1, value1, sizeof(obj.value1) - 1);
@@ -90,18 +89,30 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     memcpy(obj.V_value2, V_value2, obj.N_value2 * sizeof(double));
     obj.value3 = value3;
     obj.operation = 1;
-    strcpy(obj.q_name, queuename);
 
-
-    send_message(obj);
+    if (send_message(obj) == 0){
     printf("Termina el send message\n");
-    
     return 0;
+    }
+    return -1; 
 }
 
 int destroy(void){
     Obj obj;
     obj.operation = 2;
-    send_message(obj);
-    return 0;
+    return send_message(obj);
+}
+
+int delete_key(int key){
+    Obj obj;
+    obj.key = key;
+    obj.operation = 3;
+    return send_message(obj);
+}
+
+int exist(int key){
+    Obj obj;
+    obj.key = key;
+    obj.operation = 4;
+    return send_message(obj);
 }
