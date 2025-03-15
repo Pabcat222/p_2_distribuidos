@@ -25,8 +25,10 @@ typedef struct {
     char q_name[256];
 } Obj;   
 
+
 int tratarMensaje(void *mess){
     Obj obj;
+    Obj msg;
     int res; //respuesta
     mqd_t q_cliente;
 
@@ -68,8 +70,6 @@ int tratarMensaje(void *mess){
         }
         
         break;
-        
-
 
     case 2:
         if (destroy()==-1){
@@ -92,26 +92,75 @@ int tratarMensaje(void *mess){
         break;
 
     case 4:
-     if (exist(obj.key) == -1){
-        printf("Fallo al comprobar la base de datos\n");
-        res = -1;
-        }
+        if (exist(obj.key) == -1){
+            printf("No existen datos con esa key\n");
+            res = -1;
+            }
+            else{
+                res = 0;
+            }
+            break;
+
+    case 5:
+        if (exist(obj.key) == -1){
+            printf("No existen datos con esa key\n");
+            res = -1;
+            }
         else{
+            if (modify_value(obj.key, obj.value1, obj.N_value2, obj.V_value2, obj.value3) == -1){
+                printf("Fallo al ejecutar el modify value\n");
+                res = -1;
+            }
+            else{
+                printf("Datos modificados correctamente\n");
+                res = 0;
+            }
+            }
+            break;
+
+    case 6:
+        char value1[256];
+        int N_value2;
+        double V_value2[32];
+        struct Coord value3;
+        if (get_value(obj.key, value1, &N_value2, V_value2, &value3) == 0) {
+            printf("Valores obtenidos:\n");
+            printf("Value1: %s\n", value1);
+            printf("N_value2: %d\n", N_value2);
+            printf("V_value2: ");
+            for (int i = 0; i < N_value2; i++) {
+                printf("%.2f ", V_value2[i]);
+            }
+            printf("\nValue3: x=%d, y=%d\n", value3.x, value3.y);
+            msg.key = obj.key;
+            strcpy(msg.value1, value1);
+            msg.N_value2 = N_value2;
+            memcpy(msg.V_value2, V_value2, N_value2 * sizeof(double));
+            msg.value3 = value3;
+            strcpy(msg.q_name, obj.q_name);
+            printf("Este es el nombre de la cola del cliente: %s \n", msg.q_name);
             res = 0;
+        } else {
+            printf("Error al obtener los valores para la clave %d.\n", obj.key);
         }
+
         break;
+
     }
-    pthread_mutex_unlock(&db_mutex);
+
 
     //Se devuelve el resultado al cliente
     q_cliente = mq_open(obj.q_name, O_WRONLY);
+    printf("obj.q_name: %s \n", obj.q_name);
     
     if (q_cliente == (mqd_t)-1) {
         perror("Error al abrir la cola de mensajes del cliente\n");
         return -2;
     }
     else{
-        if(mq_send(q_cliente, (const char *) &res, sizeof(int), 0) < 0){
+        msg.operation = res;
+        strcpy(msg.q_name, obj.q_name);
+        if(mq_send(q_cliente, (char *)&msg, sizeof(Obj), 0) < 0){
             perror("Error al enviar mensaje al cliente\n");
             mq_close(q_servidor);
             mq_unlink("/SERVIDOR-5764-5879");
@@ -120,6 +169,7 @@ int tratarMensaje(void *mess){
         }
     }
 
+    pthread_mutex_unlock(&db_mutex);
     mq_close(q_cliente);
     pthread_exit(0);
 }

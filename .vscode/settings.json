@@ -1,6 +1,7 @@
 {
     "files.associations": {
         "sqlite3.h": "c",
-        "stdio.h": "c"
+        "stdio.h": "c",
+        "stat.h": "c"
     }
 }
