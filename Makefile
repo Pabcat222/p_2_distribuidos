@@ -1,34 +1,38 @@
 # Compiler
 CC = gcc
 
-# Flags
-CFLAGS = -Wall -Wextra -std=c11
+# Flags de compilación
+CFLAGS = -Wall -Wextra -std=c11 -fPIC
 LDFLAGS = -lrt -pthread -lsqlite3
+
+# Nombre de la biblioteca dinámica
+LIBRARY = libclaves.so
 
 # Ejecutables
 TARGETS = cliente cliente1 cliente2 cliente3 servidor
 
-all: $(TARGETS)
+all: $(LIBRARY) $(TARGETS)
 
-# Compilar el Cliente (app_cliente.c + proxy-mq.c)
-cliente: app_cliente.o proxy-mq.o
-	$(CC) $(CFLAGS) -o cliente app_cliente.o proxy-mq.o $(LDFLAGS)
+# Crear la biblioteca compartida (libclaves.so) solo con el código del cliente
+$(LIBRARY): proxy-mq.o
+	$(CC) -shared -o $(LIBRARY) proxy-mq.o $(LDFLAGS)
 
-# Compilar Cliente 1 (cliente1.c + proxy-mq.c)
-cliente1: cliente1.o proxy-mq.o
-	$(CC) $(CFLAGS) -o cliente1 cliente1.o proxy-mq.o $(LDFLAGS)
-
-# Compilar Cliente 2 (cliente2.c + proxy-mq.c)
-cliente2: cliente2.o proxy-mq.o
-	$(CC) $(CFLAGS) -o cliente2 cliente2.o proxy-mq.o $(LDFLAGS)
-
-# Compilar Cliente 3 (cliente3.c + proxy-mq.c)
-cliente3: cliente3.o proxy-mq.o
-	$(CC) $(CFLAGS) -o cliente3 cliente3.o proxy-mq.o $(LDFLAGS)
-
-# Compilar el Servidor (servidor-mq.c + claves.c)
+# Compilar el Servidor (usa claves.c, NO usa libclaves.so)
 servidor: servidor-mq.o claves.o
 	$(CC) $(CFLAGS) -o servidor servidor-mq.o claves.o $(LDFLAGS)
+
+# Compilar los Clientes usando la biblioteca compartida
+cliente: app_cliente.o
+	$(CC) $(CFLAGS) -o cliente app_cliente.o -L. -lclaves $(LDFLAGS)
+
+cliente1: cliente1.o
+	$(CC) $(CFLAGS) -o cliente1 cliente1.o -L. -lclaves $(LDFLAGS)
+
+cliente2: cliente2.o
+	$(CC) $(CFLAGS) -o cliente2 cliente2.o -L. -lclaves $(LDFLAGS)
+
+cliente3: cliente3.o
+	$(CC) $(CFLAGS) -o cliente3 cliente3.o -L. -lclaves $(LDFLAGS)
 
 # Compilar archivos fuente en objetos
 %.o: %.c
@@ -36,6 +40,6 @@ servidor: servidor-mq.o claves.o
 
 # Limpiar archivos generados
 clean:
-	rm -f $(TARGETS) *.o
+	rm -f $(TARGETS) *.o $(LIBRARY)
 
 .PHONY: all clean

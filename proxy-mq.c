@@ -57,6 +57,7 @@ int send_message(Obj msg, Obj *response) {
     }
     printf("Objeto enviado correctamente.\n");
 
+    
     if (mq_receive(q_cliente, (char *)response, sizeof(Obj), 0) < 0){
 		perror("Error al recibir desde el servidor");
 
@@ -65,7 +66,7 @@ int send_message(Obj msg, Obj *response) {
         mq_unlink(msg.q_name);
 		return -2;
     }
-    printf("Servidor dice: %d\n", msg.operation);
+    printf("Servidor dice: %d\n", response->operation);
     
     printf("Este es el nombre de la cola del cliente 2: %s \n", msg.q_name);
     mq_close(q_servidor);
@@ -80,7 +81,7 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
         return -1;
     }
     Obj obj;
-    
+    Obj response;
     obj.key = key;
     strncpy(obj.value1, value1, sizeof(obj.value1) - 1);
     obj.value1[sizeof(obj.value1) - 1] = '\0';
@@ -89,7 +90,7 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     obj.value3 = value3;
     obj.operation = 1;
 
-    if (send_message(obj, NULL) == 0){
+    if (send_message(obj, &response) == 0){
     return 0;
     }
     return -1; 
@@ -97,22 +98,25 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
 
 int destroy(void){
     Obj obj;
+    Obj response;
     obj.operation = 2;
-    return send_message(obj, NULL);
+    return send_message(obj, &response);
 }
 
 int delete_key(int key){
     Obj obj;
+    Obj response;
     obj.key = key;
     obj.operation = 3;
-    return send_message(obj, NULL);
+    return send_message(obj, &response);
 }
 
 int exist(int key){
     Obj obj;
+    Obj response;
     obj.key = key;
     obj.operation = 4;
-    return send_message(obj, NULL);
+    return send_message(obj, &response);
 }
 
 int modify_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3){
@@ -121,7 +125,7 @@ int modify_value(int key, char *value1, int N_value2, double *V_value2, struct C
         return -1;
     }
     Obj obj;
-    
+    Obj response;
     obj.key = key;
     strncpy(obj.value1, value1, sizeof(obj.value1) - 1);
     obj.value1[sizeof(obj.value1) - 1] = '\0';
@@ -129,7 +133,7 @@ int modify_value(int key, char *value1, int N_value2, double *V_value2, struct C
     memcpy(obj.V_value2, V_value2, obj.N_value2 * sizeof(double));
     obj.value3 = value3;
     obj.operation = 5;
-    return send_message(obj, NULL);
+    return send_message(obj, &response);
 }
 
 int get_value(int key, char *value1, int *N_value2, double *V_value2, struct Coord *value3){
