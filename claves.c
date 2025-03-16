@@ -4,7 +4,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-#define DB_NAME "/tmp/database.db"
+#define DB_NAME "/tmp/database-5764-5879.db"
 
 
 void crearBaseDatos() {
