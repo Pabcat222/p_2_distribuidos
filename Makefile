@@ -9,7 +9,7 @@ LDFLAGS = -lrt -pthread -lsqlite3
 LIBRARY = libclaves.so
 
 # Ejecutables
-TARGETS = cliente cliente1 cliente2 cliente3 servidor
+TARGETS = cliente cliente1 cliente2 cliente3 cliente4 cliente5 cliente6 servidor
 
 all: $(LIBRARY) $(TARGETS)
 
@@ -33,6 +33,16 @@ cliente2: cliente2.o
 
 cliente3: cliente3.o
 	$(CC) $(CFLAGS) -o cliente3 cliente3.o -L. -lclaves $(LDFLAGS)
+
+cliente4: cliente4.o
+	$(CC) $(CFLAGS) -o cliente4 cliente4.o -L. -lclaves $(LDFLAGS)
+
+cliente5: cliente5.o
+	$(CC) $(CFLAGS) -o cliente5 cliente5.o -L. -lclaves $(LDFLAGS)
+
+cliente6: cliente6.o
+	$(CC) $(CFLAGS) -o cliente6 cliente6.o -L. -lclaves $(LDFLAGS)
+
 
 # Compilar archivos fuente en objetos
 %.o: %.c

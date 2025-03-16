@@ -17,7 +17,7 @@ int N_value2;
 double V_value2[32];
 struct Coord value3;
 int err = get_value(key, value1, &N_value2, V_value2, &value3);
-printf("termina ya 1\n");
+
 if (err == -1) {
 printf("Error al insertar la tupla\n");
  }
