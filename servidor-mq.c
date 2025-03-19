@@ -7,7 +7,7 @@
 #include "claves.h"
 #include <signal.h>
 #include <unistd.h>
-
+//
 // Declaración de instancias relacionadas con mutex y threads
 mqd_t q_servidor;
 pthread_mutex_t db_mutex = PTHREAD_MUTEX_INITIALIZER;
