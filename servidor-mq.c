@@ -161,8 +161,14 @@ void *tratar_conexion(void *arg)
 // ---------------------------------------------------------------------------
 // Función principal (main) que arranca el servidor socket
 // ---------------------------------------------------------------------------
-int main(void)
+int main(int argc, char *argv[])
 {
+    if (argc<2){
+        fprintf(stderr, "Uso: %s <PUERTO>\n", argv[0]);
+        return 1;
+    }
+
+    int port = atoi (argv[1]);
     // Instalar la señal de Ctrl+C para poder cerrar ordenadamente
     signal(SIGINT, cerrar_servidor);
 
@@ -178,7 +184,7 @@ int main(void)
     memset(&server_addr, 0, sizeof(server_addr));
     server_addr.sin_family      = AF_INET;
     server_addr.sin_addr.s_addr = INADDR_ANY;  // o inet_addr("0.0.0.0")
-    server_addr.sin_port        = htons(SERVER_PORT);
+    server_addr.sin_port        = htons(port);
 
     // Vincular el socket a la IP/puerto
     if (bind(server_socket_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
@@ -194,7 +200,7 @@ int main(void)
         return 1;
     }
 
-    printf("[SERVIDOR] Escuchando en el puerto %d...\n", SERVER_PORT);
+    printf("[SERVIDOR] Escuchando en el puerto %d...\n", port);
 
     while (!stop_server) {
         struct sockaddr_in client_addr;
