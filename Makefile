@@ -14,12 +14,12 @@ TARGETS = cliente cliente1 cliente2 cliente3 cliente4 cliente5 cliente6 servidor
 all: $(LIBRARY) $(TARGETS)
 
 # Crear la biblioteca compartida (libclaves.so) solo con el código del cliente
-$(LIBRARY): proxy-mq.o
-	$(CC) -shared -o $(LIBRARY) proxy-mq.o $(LDFLAGS)
+$(LIBRARY): proxy-sock.o
+	$(CC) -shared -o $(LIBRARY) proxy-sock.o $(LDFLAGS)
 
 # Compilar el Servidor (usa claves.c, NO usa libclaves.so)
-servidor: servidor-mq.o claves.o
-	$(CC) $(CFLAGS) -o servidor servidor-mq.o claves.o $(LDFLAGS)
+servidor: servidor-sock.o claves.o
+	$(CC) $(CFLAGS) -o servidor servidor-sock.o claves.o $(LDFLAGS)
 
 # Compilar los Clientes usando la biblioteca compartida
 cliente: app-cliente.o
