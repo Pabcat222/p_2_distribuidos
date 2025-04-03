@@ -3,14 +3,17 @@
 #include "claves.h"
 #include <string.h>
 #include <stdlib.h>
+#include <pthread.h>
 
 #define DB_NAME "/tmp/database-5764-5879.db"
-
+pthread_mutex_t db_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 void crearBaseDatos() {
+    pthread_mutex_lock(&db_mutex);
     //Se abre la bae de datos "datos" o se crea en caso de que no exista
     sqlite3 *db;
     if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {
+        pthread_mutex_unlock(&db_mutex);
         return;
     }
 
@@ -24,15 +27,19 @@ void crearBaseDatos() {
 
     sqlite3_exec(db, sql, NULL, NULL, NULL);
     sqlite3_close(db);
+    pthread_mutex_unlock(&db_mutex);
 }
 
 int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coord value3) {
     crearBaseDatos();
+
     sqlite3 *db;
     sqlite3_stmt *stmt;
     //Abrimos base de datos
+    pthread_mutex_lock(&db_mutex);
     if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al abrir la base de datos\n");
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -43,6 +50,7 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al preparar la consulta: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -63,6 +71,7 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
 
     if (sqlite3_step(stmt) != SQLITE_DONE) {
         printf("[BASE_DATOS]Error al insertar en la base de datos: %s\n", sqlite3_errmsg(db));
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     } else {
         printf("[BASE_DATOS]Inserción realizada con éxito.\n");
@@ -70,6 +79,7 @@ int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coor
     //Cerramos la tabla modificada
     sqlite3_finalize(stmt);
     sqlite3_close(db);
+    pthread_mutex_unlock(&db_mutex);
     return 0;
 }
 
@@ -77,8 +87,10 @@ int destroy(void){
     sqlite3 *db;
     char *err_msg = NULL;
     //Abrimos la tabla
+    pthread_mutex_lock(&db_mutex);
     if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al abrir la base de datos: %s\n", sqlite3_errmsg(db));
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -89,12 +101,14 @@ int destroy(void){
         printf("[BASE_DATOS]Error al eliminar datos: %s\n", err_msg);
         sqlite3_free(err_msg);
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
     printf("[BASE_DATOS]Eliminando la base de datos...\nTodas las filas de la base de datos han sido eliminadas correctamente.\n");
     //Cerramos la tabla
     sqlite3_close(db);
+    pthread_mutex_unlock(&db_mutex);
     return 0;
 }
 
@@ -103,8 +117,10 @@ int delete_key(int key) {
     sqlite3_stmt *stmt;
     
     //Abrimos la tabla
+    pthread_mutex_lock(&db_mutex);
     if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al abrir la base de datos: %s\n", sqlite3_errmsg(db));
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
     //Borramos la key seleccionada
@@ -113,6 +129,7 @@ int delete_key(int key) {
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al preparar la consulta: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -123,16 +140,19 @@ int delete_key(int key) {
             printf("[BASE_DATOS]La clave %d no existe en la base de datos.\n", key);
             sqlite3_finalize(stmt);
             sqlite3_close(db);
+            pthread_mutex_unlock(&db_mutex);
             return -1;
         }
         printf("[BASE_DATOS]La clave %d ha sido eliminada correctamente.\n", key);
         sqlite3_finalize(stmt);
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return 0;
     } else {
         printf("[BASE_DATOS]Error al eliminar la clave %d: %s\n", key, sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 }
@@ -143,8 +163,10 @@ int exist(int key) {
     sqlite3_stmt *stmt;
 
     //Abrimos base de datos
+    pthread_mutex_lock(&db_mutex);
     if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al abrir la base de datos: %s\n", sqlite3_errmsg(db));
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -154,6 +176,7 @@ int exist(int key) {
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al preparar la consulta: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -164,16 +187,19 @@ int exist(int key) {
         printf("[BASE_DATOS]La clave %d existe en la base de datos.\n", key);
         sqlite3_finalize(stmt);
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return 1; // La clave existe
     } else if (result == SQLITE_DONE) {
         printf("[BASE_DATOS]La clave %d no existe en la base de datos.\n", key);
         sqlite3_finalize(stmt);
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return 0; // La clave no existe
     } else {
         printf("[BASE_DATOS]Error al comprobar la clave %d: %s\n", key, sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1; // Error al ejecutar la consulta
     }
 }
@@ -185,8 +211,10 @@ int modify_value(int key, char *value1, int N_value2, double *V_value2, struct C
     sqlite3_stmt *stmt;
 
     //Abrimos tabla
+    pthread_mutex_lock(&db_mutex);
     if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al abrir la base de datos: %s\n", sqlite3_errmsg(db));
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -195,6 +223,7 @@ int modify_value(int key, char *value1, int N_value2, double *V_value2, struct C
     if (sqlite3_prepare_v2(db, check_sql, -1, &stmt, NULL) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al preparar la consulta de verificación: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -205,6 +234,7 @@ int modify_value(int key, char *value1, int N_value2, double *V_value2, struct C
     if (result != SQLITE_ROW) {
         printf("[BASE_DATOS]La clave %d no existe en la base de datos.\n", key);
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -220,6 +250,7 @@ int modify_value(int key, char *value1, int N_value2, double *V_value2, struct C
     if (sqlite3_prepare_v2(db, update_sql, -1, &stmt, NULL) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al preparar la consulta de actualización: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -236,6 +267,7 @@ int modify_value(int key, char *value1, int N_value2, double *V_value2, struct C
         printf("[BASE_DATOS]Error al actualizar la clave %d: %s\n", key, sqlite3_errmsg(db));
         sqlite3_finalize(stmt);
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -244,6 +276,7 @@ int modify_value(int key, char *value1, int N_value2, double *V_value2, struct C
     //Cerrar tabla
     sqlite3_finalize(stmt);
     sqlite3_close(db);
+    pthread_mutex_unlock(&db_mutex);
     return 0;
 }
 
@@ -252,8 +285,10 @@ int get_value(int key, char *value1, int *N_value2, double *V_value2, struct Coo
     sqlite3_stmt *stmt;
 
     // Abrimos la tabla
+    pthread_mutex_lock(&db_mutex);
     if (sqlite3_open(DB_NAME, &db) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al abrir la base de datos: %s\n", sqlite3_errmsg(db));
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -262,6 +297,7 @@ int get_value(int key, char *value1, int *N_value2, double *V_value2, struct Coo
     if (sqlite3_prepare_v2(db, sql, -1, &stmt, NULL) != SQLITE_OK) {
         printf("[BASE_DATOS]Error al preparar la consulta: %s\n", sqlite3_errmsg(db));
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1;
     }
 
@@ -291,11 +327,13 @@ int get_value(int key, char *value1, int *N_value2, double *V_value2, struct Coo
 
         sqlite3_finalize(stmt);
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return 0; // Éxito
     } else {
         printf("[BASE_DATOS]La clave %d no existe en la base de datos.\n", key);
         sqlite3_finalize(stmt);
         sqlite3_close(db);
+        pthread_mutex_unlock(&db_mutex);
         return -1; // Clave no encontrada
     }
 }

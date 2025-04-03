@@ -1,13 +1,3 @@
-/************************************************************
- * servidor-sock-portable.c
- *
- * - Recibe y envía campos “uno a uno” en un orden fijo.
- * - Los enteros se convierten con htonl/ntohl (big-endian).
- * - Los doubles se transforman manualmente a 8 bytes big-endian.
- * - Usa threads para atender múltiples conexiones.
- * - Llama a funciones de "claves.h" (set_value, destroy, etc.).
- ************************************************************/
-
  #include <stdio.h>
  #include <stdlib.h>
  #include <string.h>
@@ -31,13 +21,12 @@
  } Obj;
  
  // Mutex para proteger la base de datos
- pthread_mutex_t db_mutex = PTHREAD_MUTEX_INITIALIZER;
+ //pthread_mutex_t db_mutex = PTHREAD_MUTEX_INITIALIZER;
  static int stop_server = 0;
  static int server_fd = -1;
  
- //---------------------------------------------------------------------------
+ 
  // Funciones de ayuda para enviar/recibir EXACTAMENTE n bytes
- //---------------------------------------------------------------------------
  static int recvAll(int sockfd, void *buf, size_t n)
  {
      char *p = buf;
@@ -65,9 +54,8 @@
      return 0;
  }
  
- //---------------------------------------------------------------------------
- // Conversiones de double a 8 bytes big-endian y viceversa (IEEE 754)
- //---------------------------------------------------------------------------
+ 
+ // Conversiones de double a 8 bytes big-endian y viceversa 
  static void double_to_be64(double d, unsigned char out[8])
  {
      union {
@@ -106,9 +94,8 @@
      return conv.d;
  }
  
- //---------------------------------------------------------------------------
+
  // Recibir los campos de un Obj “uno a uno”
- //---------------------------------------------------------------------------
  static int recv_obj_fields(int sockfd, Obj *obj)
  {
      memset(obj, 0, sizeof(*obj));
@@ -154,9 +141,8 @@
      return 0;
  }
  
- //---------------------------------------------------------------------------
+
  // Enviar los campos de un Obj “uno a uno”
- //---------------------------------------------------------------------------
  static int send_obj_fields(int sockfd, const Obj *obj)
  {
      // 1) operation
@@ -193,9 +179,8 @@
      return 0;
  }
  
- //---------------------------------------------------------------------------
+ 
  // Hilo que atiende la conexión
- //---------------------------------------------------------------------------
  static void *thread_conn(void *arg)
  {
      int client_fd = *(int*)arg;
@@ -210,7 +195,7 @@
      }
  
      // Procesar
-     pthread_mutex_lock(&db_mutex);
+     //pthread_mutex_lock(&db_mutex);
  
      int res = 0;
      Obj respuesta;
@@ -271,7 +256,7 @@
              res = -1;
              break;
      }
-     pthread_mutex_unlock(&db_mutex);
+     //pthread_mutex_unlock(&db_mutex);
  
      // Construir respuesta
      respuesta.operation = res;
@@ -286,9 +271,8 @@
      return NULL;
  }
  
- //---------------------------------------------------------------------------
+ 
  // Manejo de Ctrl+C
- //---------------------------------------------------------------------------
  static void sig_handler(int s)
  {
      (void)s;
@@ -297,9 +281,8 @@
      close(server_fd);
  }
  
- //---------------------------------------------------------------------------
+ 
  // main
- //---------------------------------------------------------------------------
  int main(int argc, char *argv[])
  {
      if (argc < 2) {
@@ -315,6 +298,9 @@
          perror("[SERVIDOR] socket");
          return 1;
      }
+
+    int val = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, (char *) &val, sizeof(int));
  
      // Bind
      struct sockaddr_in serv_addr;
@@ -362,7 +348,7 @@
      }
  
      close(server_fd);
-     printf("[SERVIDOR] Finalizado.\n");
+     printf("[SERVIDOR] Apagando servidor...\n");
      return 0;
  }
  
