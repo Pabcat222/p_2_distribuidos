@@ -1,13 +1,3 @@
-/********************
- * proxy-sock-portable.c
- *
- * - Envía los campos “uno a uno” en big-endian (enteros)
- *   y convierte doubles a 8 bytes big-endian.
- * - Lee IP y puerto del entorno: IP_TUPLAS, PORT_TUPLAS.
- * - Llama internamente a set_value, destroy, etc. que usan
- *   send_message() para mandar la petición.
- ********************/
-
  #include <stdio.h>
  #include <stdlib.h>
  #include <string.h>
@@ -27,9 +17,8 @@
      struct Coord value3;
  } Obj;
  
- //------------------------------------------
+ 
  // Funciones de ayuda
- //------------------------------------------
  static int sendAll(int sockfd, const void *buf, size_t n)
  {
      const char *p = buf;
@@ -81,9 +70,8 @@
      return conv.d;
  }
  
- //------------------------------------------
+ 
  // Enviar los campos del Obj uno a uno
- //------------------------------------------
  static int send_obj_fields(int sockfd, const Obj *obj)
  {
      // operation
@@ -120,9 +108,8 @@
      return 0;
  }
  
- //------------------------------------------
+
  // Recibir los campos
- //------------------------------------------
  static int recv_obj_fields(int sockfd, Obj *obj)
  {
      memset(obj, 0, sizeof(*obj));
@@ -168,9 +155,8 @@
      return 0;
  }
  
- //------------------------------------------
+
  // Conexión al servidor (IP y puerto del entorno)
- //------------------------------------------
  static int connect_to_server(void)
  {
      char *ip_str = getenv("IP_TUPLAS");
@@ -207,9 +193,7 @@
      return sockfd;
  }
  
- //------------------------------------------
  // Función genérica: envía peticion, recibe respuesta
- //------------------------------------------
  static int send_message(const Obj *req, Obj *resp)
  {
      int sockfd = connect_to_server();
@@ -233,9 +217,7 @@
      return 0;
  }
  
- //------------------------------------------
  // Ahora definimos set_value, destroy, etc.
- //------------------------------------------
  int set_value(int key, char *value1, int N_value2, double *V_value2, struct Coord c)
  {
      if (N_value2 < 1 || N_value2>32) return -1;
